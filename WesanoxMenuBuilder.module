@@ -8,7 +8,7 @@ public static function getModuleInfo()
         return array(
             'title' => 'wesanox Menu Builder',
             'summary' => 'A little Menu Builder for Processwire.',
-            'version' => '0.0.1',
+            'version' => '0.0.3',
             'author' => 'André Wester',
             'icon' => 'codepen',
             'singular' => true,
@@ -566,7 +566,7 @@ public static function getModuleInfo()
                         'id' => $menu_item->link_intern->id,
                         'aria' => $menu_item->link_aria_label ?: $menu_item->link_intern->title,
                         'desc' => $menu_item->link_description ?: '',
-                        'image' => $menu_item->image->url ?: '',
+                        'image' => ($menu_item->image) ? $menu_item->image->url : '',
                         'parent_id' => $menu_item->int_menu_sub,
                         'sub_menu_id' => $menu_item->int_menu_sub,
                     ];
@@ -585,7 +585,7 @@ public static function getModuleInfo()
                         'id' => $menu_item->link_intern->id,
                         'aria' => $menu_item->link_aria_label ?: $menu_item->link_intern->title,
                         'desc' => $menu_item->link_description ?: '',
-                        'image' => $menu_item->image->url ?: '',
+                        'image' => ($menu_item->image) ? $menu_item->image->url : '',
                         'parent_id' => $menu_item->int_menu,
                         'sub_menu_id' => $menu_item->int_menu_sub,
                         'menu_sub_sub_elements' => [],
@@ -611,7 +611,7 @@ public static function getModuleInfo()
                         'id' => $menu_item->link_intern->id,
                         'aria' => $menu_item->link_aria_label ?: $menu_item->link_intern->title,
                         'desc' => $menu_item->link_description ?: '',
-                        'image' => $menu_item->image->url ?: '',
+                        'image' => ($menu_item->image) ? $menu_item->image->url : '',
                         'parent_id' => $menu_item->int_menu,
                         'menu_sub_elements' => [],
                     ];
