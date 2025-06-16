@@ -440,14 +440,20 @@ public static function getModuleInfo()
             $repeater_template->fieldgroup->add('link_aria');
             $repeater_template->fieldgroup->add('link_new_tab');
 
-            $repeater_template->fieldgroup->get('image')->set('columnWidth', 50)->save();
-//            $repeater_template->fieldgroup->get('image')->set('showIf', 'select_menu_typ=1')->save();
-            $this->fields->get('link_description')->set('showIf', 'select_menu_typ=1')->save();
-            $this->fields->get('link_intern')->set('showIf', 'select_menu_typ=1')->save();
-            $this->fields->get('link_extern')->set('showIf', 'select_menu_typ=1')->save();
-            $this->fields->get('link_new_tab')->set('columnWidth', 25)->save();
-            $this->fields->get('link_new_tab')->set('showIf', 'select_menu_typ=1')->save();
-            $this->fields->get('link_text')->set('columnWidth', 50)->save();
+
+            /**
+             * @TODO set showIf should be done by the installation but it overwrite the whole fieldsettings of a field
+             *
+             * $repeater_template->fieldgroup->get('image')->set('columnWidth', 50)->save();
+             * $repeater_template->fieldgroup->get('image')->set('showIf', 'select_menu_typ=1')->save();
+             * $this->fields->get('link_description')->set('showIf', 'select_menu_typ=1')->save();
+             * $this->fields->get('link_intern')->set('showIf', 'select_menu_typ=1')->save();
+             * $this->fields->get('link_extern')->set('showIf', 'select_menu_typ=1')->save();
+             * $this->fields->get('link_new_tab')->set('columnWidth', 25)->save();
+             * $this->fields->get('link_new_tab')->set('showIf', 'select_menu_typ=1')->save();
+             * $this->fields->get('link_text')->set('columnWidth', 50)->save();
+             *
+             **/
 
             $repeater_template->fieldgroup->save();
             $repeater_template->save();
