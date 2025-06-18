@@ -561,13 +561,14 @@ public static function getModuleInfo()
 
                 if ( $depth === 2 ) {
                     $menu_sub_sub_element = [
-                        'url' => $menu_item->link_extern ?: $menu_item->link_intern->url,
-                        'title' => $menu_item->link_text ?: $menu_item->link_intern->title,
-                        'id' => $menu_item->link_intern->id,
-                        'aria' => $menu_item->link_aria_label ?: $menu_item->link_intern->title,
+                        'url' => $menu_item->link_extern ?: ($menu_item->link_intern->url ?? ''),
+                        'title' => $menu_item->link_text ?: ($menu_item->link_intern->title ?? 'KEIN TITEL'),
+                        'id' => $menu_item->link_intern->id ?? 0,
+                        'aria' => $menu_item->link_aria_label ?: ($menu_item->link_intern->title ?? 'KEIN ARIA LABEL'),
                         'desc' => $menu_item->link_description ?: '',
-                        'image' => ($menu_item->image) ? $menu_item->image->url : '',
+                        'image' => $menu_item->image->url ?? '',
                         'parent_id' => $menu_item->int_menu_sub,
+                        'target' => $menu_item->link_new_tab,
                         'sub_menu_id' => $menu_item->int_menu_sub,
                     ];
 
@@ -580,13 +581,14 @@ public static function getModuleInfo()
 
                 if ( $depth === 1 ) {
                     $menu_sub_element = [
-                        'url' => $menu_item->link_extern ?: $menu_item->link_intern->url,
-                        'title' => $menu_item->link_text ?: $menu_item->link_intern->title,
-                        'id' => $menu_item->link_intern->id,
-                        'aria' => $menu_item->link_aria_label ?: $menu_item->link_intern->title,
+                        'url' => $menu_item->link_extern ?: ($menu_item->link_intern->url ?? ''),
+                        'title' => $menu_item->link_text ?: ($menu_item->link_intern->title ?? 'KEIN TITEL'),
+                        'id' => $menu_item->link_intern->id ?? 0,
+                        'aria' => $menu_item->link_aria_label ?: ($menu_item->link_intern->title ?? 'KEIN ARIA LABEL'),
                         'desc' => $menu_item->link_description ?: '',
-                        'image' => ($menu_item->image) ? $menu_item->image->url : '',
+                        'image' => $menu_item->image->url ?? '',
                         'parent_id' => $menu_item->int_menu,
+                        'target' => $menu_item->link_new_tab,
                         'sub_menu_id' => $menu_item->int_menu_sub,
                         'menu_sub_sub_elements' => [],
                     ];
@@ -606,13 +608,14 @@ public static function getModuleInfo()
 
                 if ( $depth === 0 ) {
                     $menu_element = [
-                        'url' => $menu_item->link_extern ?: $menu_item->link_intern->url,
-                        'title' => $menu_item->link_text ?: $menu_item->link_intern->title,
-                        'id' => $menu_item->link_intern->id,
-                        'aria' => $menu_item->link_aria_label ?: $menu_item->link_intern->title,
+                        'url' => $menu_item->link_extern ?: ($menu_item->link_intern->url ?? ''),
+                        'title' => $menu_item->link_text ?: ($menu_item->link_intern->title ?? 'KEIN TITEL'),
+                        'id' => $menu_item->link_intern->id ?? 0,
+                        'aria' => $menu_item->link_aria_label ?: ($menu_item->link_intern->title ?? 'KEIN ARIA LABEL'),
                         'desc' => $menu_item->link_description ?: '',
-                        'image' => ($menu_item->image) ? $menu_item->image->url : '',
+                        'image' => $menu_item->image->url ?? '',
                         'parent_id' => $menu_item->int_menu,
+                        'target' => $menu_item->link_new_tab,
                         'menu_sub_elements' => [],
                     ];
 
