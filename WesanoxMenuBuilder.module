@@ -8,7 +8,7 @@ public static function getModuleInfo()
         return array(
             'title' => 'wesanox Menu Builder',
             'summary' => 'A little Menu Builder for Processwire.',
-            'version' => '0.0.3',
+            'version' => '0.0.4',
             'author' => 'André Wester',
             'icon' => 'codepen',
             'singular' => true,
