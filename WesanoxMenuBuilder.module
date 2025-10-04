@@ -17,7 +17,9 @@ public static function getModuleInfo()
             'requires' => array(
                 'ProcessWire>=3.0.210',
                 'PHP>=8.0.0',
-                'FieldtypeRepeaterMatrix>=0.0.9'
+                'FieldtypeRepeaterMatrix>=0.0.9',
+                'WesanoxHelperFields>=0.0.1',
+                'WesanoxHelperClasses>=0.0.1',
             ),
         );
     }
@@ -26,14 +28,39 @@ public static function getModuleInfo()
         'CroppableImage3' => 'https://github.com/horst-n/CroppableImage3/archive/master.zip',
     ];
 
-    protected string $template_options;
+    protected array $external_modules = [
+        'WesanoxHelperFields' => 'https://github.com/wesanox/WesanoxHelperFields/archive/refs/heads/main.zip',
+        'WesanoxHelperClasses' => 'https://github.com/wesanox/WesanoxHelperClasses/archive/refs/heads/main.zip',
+    ];
 
-    public function __construct()
+    /**
+     * @var Module|_Module|null $helper_classes
+     * @var Module|_Module|null $helper_fields
+     */
+    protected Module|_Module|null $helper_fields;
+    protected Module|_Module|null $helper_classes;
+
+    /**
+     * @var array $fields_array
+     */
+    protected array $fields_array = [];
+
+    /**
+     * @var string $template_options
+     */
+    protected string $template_options = 'options_generals';
+
+    /**
+     * @throws WirePermissionException
+     */
+    function __construct()
     {
-        /**
-         * set the Template Name
-         */
-        $this->template_options  = 'options_generals';
+        parent::__construct();
+
+        $this->helper_classes = $this->modules->get('WesanoxHelperClasses');
+        $this->helper_fields = $this->modules->get('WesanoxHelperFields');
+
+        $this->fields_array = include $this->config->paths->WesanoxMenuBuilder . 'config/fields.php';
     }
 
     /**
@@ -56,19 +83,30 @@ public static function getModuleInfo()
     public function ___install() :void
     {
         /**
+         * Install internal modules
+         */
+        foreach ($this->internal_modules as $module_name) {
+            if (!$this->modules->isInstalled($module_name)) {
+                $this->modules->get($module_name);
+            }
+        }
+
+        /**
          * Install external modules
          */
-        foreach ($this->externalModules as $moduleName => $moduleUrl) {
-            if (!$this->modules->isInstalled($moduleName)) {
-                $message = $this->downloadAndInstallModule($moduleName, $moduleUrl);
+        foreach ($this->external_modules as $module_name => $module_url) {
+            if (!$this->modules->isInstalled($module_name)) {
+                $message = $this->helper_classes->downloadInstall($module_name, $module_url);
                 if ($message !== true) $this->error($message);
             }
         }
 
         /**
-         * create the fields for the custom menu
+         * create fields
          */
-        $this->createFields($this->fields);
+        foreach ($this->fields_array as $field_array) {
+            $this->helper_fields->createFields($field_array);
+        }
 
         /**
          * if not exists, create settings Page or add new Fields
@@ -83,14 +121,14 @@ public static function getModuleInfo()
             $fg->add('tab_menu_END');
             $fg->save();
 
-            $op = new Template();
-            $op->name = $this->template_options;
-            $op->label = 'Einstellungen';
-            $op->fieldgroup = $fg;
-            $op->icon = 'cogs';
-            $op->tags = 'Options';
-            $op->noParents = -1;
-            $op->save();
+            $t = new Template();
+            $t->name = $this->template_options;
+            $t->label = 'Einstellungen';
+            $t->fieldgroup = $fg;
+            $t->icon = 'cogs';
+            $t->tags = 'Options';
+            $t->noParents = -1;
+            $t->save();
 
             if (!$this->pages->get('template=options_generals')->id) {
                 $p = new Page();
@@ -101,11 +139,11 @@ public static function getModuleInfo()
                 $p->save();
             }
         } else {
-            $op = $this->fieldgroups->get($this->template_options);
-            $op->add('tab_menu');
-            $op->add('matrix_menu');
-            $op->add('tab_menu_END');
-            $op->save();
+            $t = $this->fieldgroups->get($this->template_options);
+            $t->add('tab_menu');
+            $t->add('matrix_menu');
+            $t->add('tab_menu_END');
+            $t->save();
         }
     }
 
@@ -121,377 +159,18 @@ public static function getModuleInfo()
          * remove fields from option page
          */
         if($this->templates->get($this->template_options)) {
-            $op = $this->fieldgroups->get($this->template_options);
-            $op->remove('tab_menu');
-            $op->remove('matrix_menu');
-            $op->remove('tab_menu_END');
-            $op->save();
+            $t = $this->fieldgroups->get($this->template_options);
+            $t->deleteAll();
+            $t->save();
         }
 
         /**
          * delete fields
          */
-        if ($this->fields->get('matrix_menu') && $this->fields->get('matrix_menu')->getFieldgroups()->count == 0) $this->fields->delete($this->fields->get('matrix_menu'));
-        if ($this->fields->get('repeater_menu') && $this->fields->get('repeater_menu')->getFieldgroups()->count == 0) $this->fields->delete($this->fields->get('repeater_menu'));
+        $matrix_menu = $this->fields->get('matrix_menu');
+        $this->fields->delete($matrix_menu);
 
-        if ($this->fields->get('int_menu') && $this->fields->get('int_menu')->getFieldgroups()->count == 0) $this->fields->delete($this->fields->get('int_menu'));
-        if ($this->fields->get('int_menu_sub') && $this->fields->get('int_menu_sub')->getFieldgroups()->count == 0) $this->fields->delete($this->fields->get('int_menu_sub'));
-
-        if ($this->fields->get('link_extern') && $this->fields->get('link_extern')->getFieldgroups()->count == 0) $this->fields->delete($this->fields->get('link_extern'));
-        if ($this->fields->get('link_intern') && $this->fields->get('link_intern')->getFieldgroups()->count == 0) $this->fields->delete($this->fields->get('link_intern'));
-        if ($this->fields->get('link_text') && $this->fields->get('link_text')->getFieldgroups()->count == 0) $this->fields->delete($this->fields->get('link_text'));
-        if ($this->fields->get('link_aria') && $this->fields->get('link_aria')->getFieldgroups()->count == 0) $this->fields->delete($this->fields->get('link_aria'));
-        if ($this->fields->get('link_description') && $this->fields->get('link_description')->getFieldgroups()->count == 0) $this->fields->delete($this->fields->get('link_description'));
-        if ($this->fields->get('link_new_tab') && $this->fields->get('link_new_tab')->getFieldgroups()->count == 0) $this->fields->delete($this->fields->get('link_new_tab'));
-
-        if ($this->fields->get('image') && $this->fields->get('image')->getFieldgroups()->count == 0) $this->fields->delete($this->fields->get('image'));
-
-        if ($this->fields->get('select_menu_position') && $this->fields->get('select_menu_position')->getFieldgroups()->count == 0) $this->fields->delete($this->fields->get('select_menu_position'));
-        if ($this->fields->get('select_menu_typ') && $this->fields->get('select_menu_typ')->getFieldgroups()->count == 0) $this->fields->delete($this->fields->get('select_menu_typ'));
-
-        if ($this->fields->get('checkbox_menu_column') && $this->fields->get('checkbox_menu_column')->getFieldgroups()->count == 0) $this->fields->delete($this->fields->get('checkbox_menu_column'));
-        if ($this->fields->get('checkbox_new_tab') && $this->fields->get('checkbox_new_tab')->getFieldgroups()->count == 0) $this->fields->delete($this->fields->get('checkbox_new_tab'));
-
-        if ($this->fields->get('tab_menu') && $this->fields->get('tab_menu')->getFieldgroups()->count == 0) $this->fields->delete($this->fields->get('tab_menu'));
-        if ($this->fields->get('tab_menu_END') && $this->fields->get('tab_menu_END')->getFieldgroups()->count == 0) $this->fields->delete($this->fields->get('tab_menu_END'));
-    }
-
-    /**
-     * create fields function for the module
-     *
-     * @param $fields
-     * @return void
-     * @throws WirePermissionException
-     */
-    private function createFields($fields): void
-    {
-        /**
-         * create the id fields for the repeater_menu
-         */
-        if(!$fields->get('int_menu')) {
-            $field = new Field;
-            $field->type = $this->modules->get('FieldtypeInteger');
-            $field->name = "int_menu";
-            $field->label = $this->_('Menü - ID');
-            $field->icon = 'Calculator';
-            $field->zeroNotEmpty = 0;
-            $field->collapsed = 4;
-            $field->inputType = 'text';
-            $field->tags = 'integer';
-            $field->columnWidth = 50;
-            $field->save();
-        }
-
-        if(!$fields->get('int_menu_sub')) {
-            $field = new Field;
-            $field->type = $this->modules->get('FieldtypeInteger');
-            $field->name = "int_menu_sub";
-            $field->label = $this->_('Sub Menü - ID');
-            $field->icon = 'Calculator';
-            $field->zeroNotEmpty = 0;
-            $field->collapsed = 4;
-            $field->inputType = 'text';
-            $field->tags = 'integer';
-            $field->columnWidth = 50;
-            $field->save();
-        }
-
-        /**
-         * check / create text fields headline and link
-         */
-        if(!$fields->get('link_extern')) {
-            $field = new Field;
-            $field->type = $this->modules->get('FieldtypeText');
-            $field->name = "link_extern";
-            $field->label = $this->_('Link (extern)');
-            $field->tags = 'links';
-            $field->icon = 'Link';
-            $field->columnWidth = 50;
-            $field->save();
-        }
-
-        if(!$fields->get('link_text')) {
-            $field = new Field;
-            $field->type = $this->modules->get('FieldtypeText');
-            $field->name = "link_text";
-            $field->label = $this->_('Link Text');
-            $field->tags = 'links';
-            $field->icon = 'Link';
-            $field->columnWidth = 50;
-            $field->save();
-        }
-
-        if(!$fields->get('link_aria')) {
-            $field = new Field;
-            $field->type = $this->modules->get('FieldtypeText');
-            $field->name = "link_aria";
-            $field->label = $this->_('Link (aria-label)');
-            $field->tags = 'links';
-            $field->icon = 'Link';
-            $field->columnWidth = 25;
-            $field->save();
-        }
-
-        if(!$fields->get('link_description')) {
-            $field = new Field;
-            $field->type = $this->modules->get('FieldtypeTextarea');
-            $field->name = "link_description";
-            $field->label = $this->_('Link Zusatzbeschirftung');
-            $field->tags = 'links';
-            $field->icon = 'Link';
-            $field->columnWidth = 50;
-            $field->save();
-        }
-
-        /**
-         *
-         */
-        if(!$fields->get('image')) {
-            $crop_image =
-                <<<EOT
-                desktop,1920,1080
-                tablet,1024,600
-                mobile,600,600
-                quadratisch,750,750
-                EOT;
-
-            $field = new Field;
-            $field->type = $this->modules->get('FieldtypeCroppableImage3');
-            $field->name = "image";
-            $field->label = $this->_('Bild');
-            $field->tags = 'images';
-            $field->icon = 'File image o';
-            $field->columnWidth = 50;
-            $field->maxFiles = 1;
-            $field->defaultValuePage = 0;
-            $field->gridMode = 'list';
-            $field->clientQuality = 90;
-            $field->extensions = 'gif jpg jpeg png';
-            $field->cropSetting = $crop_image;
-            $field->inputfieldClass = 'InputfieldCroppableImage3';
-            $field->save();
-
-            $f = $fields->get('image');
-            $f->save();
-        }
-
-        /**
-         * tabs for the menu in the settings page
-         */
-        if(!$fields->get('tab_menu')) {
-            $field = new Field;
-            $field->type = $this->modules->get('FieldtypeFieldsetTabOpen');
-            $field->name = "tab_menu";
-            $field->label = $this->_('Menü Einstellungen');
-            $field->tags = 'tabs';
-            $field->icon = 'Tag';
-            $field->save();
-        }
-
-        if(!$fields->get('tab_menu_END')) {
-            $field = new Field;
-            $field->type = $this->modules->get('FieldtypeFieldsetClose');
-            $field->name = "tab_menu_END";
-            $field->label = $this->_('Close an open fieldset');
-            $field->tags = 'tabs';
-            $field->icon = 'Tag';
-            $field->save();
-        }
-
-        /**
-         * create Select Options
-         */
-        if(!$fields->get('select_menu_position')) {
-            $field = new Field;
-            $field->type = $this->modules->get('FieldtypeOptions');
-            $field->name = "select_menu_position";
-            $field->label = $this->_('Menü Position');
-            $field->tags = 'settings';
-            $field->icon = 'Check square o';
-            $field->columnWidth = 50;
-            $field->save();
-
-            $manager = new SelectableOptionManager();
-            $options = '
-                1=Header
-                2=Footer
-                ';
-            $manager->setOptionsString($field, $options, false);
-
-            $field->save();
-        }
-
-        if(!$fields->get('select_menu_typ')) {
-            $field = new Field;
-            $field->type = $this->modules->get('FieldtypeOptions');
-            $field->name = "select_menu_typ";
-            $field->label = $this->_('Menü Element Typ');
-            $field->description = $this->_('Soll eine Verlinkung gesetzt werden oder einfach nur ein Menüelement?');
-            $field->tags = 'settings';
-            $field->icon = 'Check square o';
-            $field->columnWidth = 100;
-            $field->save();
-
-            $manager = new SelectableOptionManager();
-            $options = '
-                1=Verlinkung
-                2=Menüelement
-                ';
-            $manager->setOptionsString($field, $options, false);
-
-            $field->save();
-        }
-
-        /**
-         * create pagelist field für menu select
-         */
-        if(!$fields->get('link_intern')) {
-            $field = new Field;
-            $field->type = $this->modules->get('FieldtypePage');
-            $field->name = "link_intern";
-            $field->label = $this->_('Link (intern)');
-            $field->tags = 'links';
-            $field->icon = 'Link';
-            $field->columnWidth = 50;
-            $field->derefAsPage = 2;
-            $field->inputfield = 'InputfieldPageListSelect';
-            $field->parent_id = 0;
-            $field->labelFieldName = 'title';
-            $field->collapsed = 0;
-            $field->save();
-        }
-
-        /**
-         * create checkboxes for the module
-         */
-        if(!$fields->get('checkbox_menu_column')) {
-            $field = new Field;
-            $field->type = $this->modules->get('FieldtypeCheckbox');
-            $field->name = "checkbox_menu_column";
-            $field->label = $this->_('Menü vertikal?');
-            $field->tags = 'settings';
-            $field->icon = 'Check';
-            $field->columnWidth = 50;
-            $field->save();
-        }
-
-        if(!$fields->get('link_new_tab')) {
-            $field = new Field;
-            $field->type = $this->modules->get('FieldtypeCheckbox');
-            $field->name = "link_new_tab";
-            $field->label = $this->_('Im neuen Tab öffnen?');
-            $field->tags = 'links';
-            $field->icon = 'Link';
-            $field->columnWidth = 25;
-            $field->save();
-        }
-
-        /**
-         * create Repeater for Menu - Items
-         */
-        if(!$fields->get('repeater_menu')) {
-            $id_int_menu = $fields->get('int_menu')->id;
-            $id_int_menu_sub = $fields->get('int_menu_sub')->id;
-            $id_select_menu = $fields->get('select_menu_typ')->id;
-            $id_image = $fields->get('image')->id;
-            $id_link_description = $fields->get('link_description')->id;
-            $id_link_intern = $fields->get('link_intern')->id;
-            $id_link_extern = $fields->get('link_extern')->id;
-            $id_link_text = $fields->get('link_text')->id;
-            $id_link_aria = $fields->get('link_aria')->id;
-            $id_link_new_tab = $fields->get('link_new_tab')->id;
-
-            $field = new Field();
-            $field->type = $this->modules->get("FieldtypeRepeater");
-            $field->name = 'repeater_menu';
-            $field->label = $this->_('Repeater (Menü)');
-            $field->tags = 'repeater';
-            $field->icon = 'repeat';
-            $field->repeaterDepth = 3;
-            $field->repeaterTitle = '{link_intern.title} {link_text}';
-            $field->repeaterLoading = 1;
-
-            $field->repeaterFields = array(
-                0 => $id_int_menu,
-                1 => $id_int_menu_sub,
-                2 => $id_select_menu,
-                3 => $id_link_description,
-                4 => $id_image,
-                5 => $id_link_intern,
-                6 => $id_link_extern,
-                7 => $id_link_text,
-                8 => $id_link_aria,
-                9 => $id_link_new_tab,
-            );
-
-            $field->save();
-
-            $repeater = $fields->get('repeater_menu');
-
-            $repeater_template = $repeater->type->getRepeaterTemplate($repeater);
-            $repeater_template->fieldgroup->add('int_menu');
-            $repeater_template->fieldgroup->add('int_menu_sub');
-            $repeater_template->fieldgroup->add('select_menu_typ');
-            $repeater_template->fieldgroup->add('image');
-            $repeater_template->fieldgroup->add('link_description');
-            $repeater_template->fieldgroup->add('link_intern');
-            $repeater_template->fieldgroup->add('link_extern');
-            $repeater_template->fieldgroup->add('link_text');
-            $repeater_template->fieldgroup->add('link_aria');
-            $repeater_template->fieldgroup->add('link_new_tab');
-
-
-            /**
-             * @TODO set showIf should be done by the installation but it overwrite the whole fieldsettings of a field
-             *
-             * $repeater_template->fieldgroup->get('image')->set('columnWidth', 50)->save();
-             * $repeater_template->fieldgroup->get('image')->set('showIf', 'select_menu_typ=1')->save();
-             * $this->fields->get('link_description')->set('showIf', 'select_menu_typ=1')->save();
-             * $this->fields->get('link_intern')->set('showIf', 'select_menu_typ=1')->save();
-             * $this->fields->get('link_extern')->set('showIf', 'select_menu_typ=1')->save();
-             * $this->fields->get('link_new_tab')->set('columnWidth', 25)->save();
-             * $this->fields->get('link_new_tab')->set('showIf', 'select_menu_typ=1')->save();
-             * $this->fields->get('link_text')->set('columnWidth', 50)->save();
-             *
-             **/
-
-            $repeater_template->fieldgroup->save();
-            $repeater_template->save();
-        }
-
-        /**
-         * matrix for the menu in the settings page
-         */
-        if(!$fields->get('matrix_menu')) {
-            $id_matrix_type = $fields->get('repeater_matrix_type')->id;
-            $id_select_field = $fields->get('select_menu_position')->id;
-            $id_checkbox_menu = $fields->get('checkbox_menu_column')->id;
-            $id_repeater_menu = $fields->get('repeater_menu')->id;
-
-            $field = new Field();
-            $field->type = $this->modules->get("FieldtypeRepeaterMatrix");
-            $field->name = 'matrix_menu';
-            $field->label = $this->_('Matrix (Menü)');
-            $field->tags = 'matrix';
-            $field->icon = 'Codepen';
-            $field->addType = 1;
-            $field->repeaterFields = array( 0 => $id_matrix_type, 1 => $id_select_field , 2 => $id_checkbox_menu, 3 => $id_repeater_menu );
-            $field->matrix1_name = 'menu_element';
-            $field->matrix1_label = 'Neues Menüelement';
-            $field->matrix1_head = '{matrix_label} [• {matrix_summary}]';
-            $field->matrix1_fields = array( 0 => $id_select_field , 1 => $id_checkbox_menu, 2 => $id_repeater_menu );
-            $field->matrix1_sort = 0;
-            $field->save();
-
-            $repeater_matrix = $fields->get('matrix_menu');
-
-            $repeater_matrix_template = $repeater_matrix->type->getMatrixTemplate($repeater_matrix);
-            $repeater_matrix_template->fieldgroup->add('select_menu_position');
-            $repeater_matrix_template->fieldgroup->add('checkbox_menu_column');
-            $repeater_matrix_template->fieldgroup->add('repeater_menu');
-            $repeater_matrix_template->fieldgroup->save();
-            $repeater_matrix_template->save();
-        }
+        $this->helper_fields->deleteFields($this->fields_array);
     }
 
     /**
