@@ -160,7 +160,9 @@ public static function getModuleInfo()
          */
         if($this->templates->get($this->template_options)) {
             $t = $this->fieldgroups->get($this->template_options);
-            $t->deleteAll();
+            $t->remove('tab_menu');
+            $t->remove('matrix_menu');
+            $t->remove('tab_menu_END');
             $t->save();
         }
 
